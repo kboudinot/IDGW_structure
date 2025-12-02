@@ -4,6 +4,7 @@ Repository for code associated with analysis of population structure for gray wo
 
 # Description of CSVs
 microhaplotype_genotypes_raw: Indiv, Locus, Allele1, Allele2, Allele1_count, Allele2_count, and p.
+neutral_diagnoslic_loci_new(in): Diagnostic, OG_locus_ID, Chr, BP, Locus, CanFam3.1_Chr, CanFam3.1_BP, and CanFam3.1_Locus.
 
 # Description of scripts
 
