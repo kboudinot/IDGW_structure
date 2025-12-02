@@ -9,6 +9,7 @@ Delomas et al. 2023 pipeline: https://github.com/arianacerreta/IDGW-bioinformati
 ## GT-seq data processing
 microhaplotype_genotypes_raw: Indiv, Locus, Allele1, Allele2, Allele1_count, Allele2_count, and p.\
 neutral_diagnoslic_loci_new(in): Diagnostic, OG_locus_ID, Chr, BP, Locus, CanFam3.1_Chr, CanFam3.1_BP, and CanFam3.1_Locus.\
+## Sample metadata
 sample_metadata_regions: Sample, ID, MortYear,	GMU, and Region.
 
 # R code
