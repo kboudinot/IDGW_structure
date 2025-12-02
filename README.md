@@ -8,7 +8,10 @@ Delomas et al. 2023 pipeline: https://github.com/arianacerreta/IDGW-bioinformati
 ## R scripts
 ### filtering_microhaps.R
 
-Data inputs: microhaplotype_genotypes_raw.csv, neutral_diagnoslic_loci_new(in).csv, sample_metadata_regions.csv
+Data inputs: 
+1. microhaplotype_genotypes_raw.csv
+2. neutral_diagnoslic_loci_new(in).csv
+3. sample_metadata_regions.csv
 
 Details: Script used for filtering data based on missingess per locus and genotype, diagnostic loci, replicates, and relatedness.
 
