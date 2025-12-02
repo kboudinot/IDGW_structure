@@ -10,7 +10,7 @@ microhaplotype_genotypes_raw: Indiv, Locus, Allele1, Allele2, Allele1_count, All
 neutral_diagnoslic_loci_new(in): Diagnostic, OG_locus_ID, Chr, BP, Locus, CanFam3.1_Chr, CanFam3.1_BP, and CanFam3.1_Locus.\
 sample_metadata_regions: Sample, ID, MortYear,	GMU, and Region.
 
-# Description of scripts
-
 # R code
+## GT-seq data processing
+filtering_microhaps.R
 
