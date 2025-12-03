@@ -10,7 +10,7 @@ Delomas et al. 2023 pipeline: https://github.com/arianacerreta/IDGW-bioinformati
 
 Data inputs: 
 1. microhaplotype_genotypes_raw.csv
-2. neutral_diagnoslic_loci_new(in).csv
+2. neutral_diagnostic_loci_new(in).csv
 3. sample_metadata_regions.csv
 4. relatedness_trioml.csv
 
