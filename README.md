@@ -16,7 +16,7 @@ Data inputs:
 
 Details: Script used for filtering data based on missingess per locus and genotype, diagnostic loci, replicates, and relatedness.
 
-Output: structure_data.csv
+Output: structure_data.txt
 
 ## References 
 Delomas, T. A., J. Struthers, T. Hebdon, and M. R. Campbell. 2023. Development of a microhaplotype panel to inform management of gray wolves. Conservation Genetics Resources 15:49–57.
