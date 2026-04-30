@@ -4,6 +4,7 @@ Authors: Koryna Boudinot, Elise M. Stacy, Ariana L. Cerreta, Joel M. Tebbenkamp,
 ### Primary contact: Koryna Boudinot, kboudinot@uidaho.edu
 
 ## Genotyping and bioinformatics
+Cerreta et al. in review pipeline: https://github.com/arianacerreta/IDGW-bioinformatics-pipeline
 Delomas et al. 2023 pipeline: https://github.com/arianacerreta/IDGW-bioinformatics-pipeline
 
 ## R scripts
@@ -20,4 +21,6 @@ Details: Script used for filtering data based on missingess per locus and genoty
 Output: structure_data.txt
 
 ## References 
+Cerreta, A. L., J. R. Adams, K. Petersen, N. R. Campbell, and D. E. Ausband. In review. More than 	one way to SNP a scat? The implementation of a microhaplotype SNP panel for non-	invasive fecal samples. G3: Genes | Genomes | Genetics. 
 Delomas, T. A., J. Struthers, T. Hebdon, and M. R. Campbell. 2023. Development of a microhaplotype panel to inform management of gray wolves. Conservation Genetics Resources 15:49–57.
+
