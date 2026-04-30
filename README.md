@@ -5,6 +5,7 @@ Authors: Koryna Boudinot, Elise M. Stacy, Ariana L. Cerreta, Joel M. Tebbenkamp,
 
 ## Genotyping and bioinformatics
 Cerreta et al. in review pipeline: https://github.com/arianacerreta/IDGW-bioinformatics-pipeline
+
 Delomas et al. 2023 pipeline: https://github.com/arianacerreta/IDGW-bioinformatics-pipeline
 
 ## R scripts
