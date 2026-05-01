@@ -244,6 +244,8 @@ genotype_diagnostic_genind_scale <- scaleGen(genotype_diagnostic_genind, center 
 genotype_diagnostic_dog_genind_scale <- scaleGen(genotype_diagnostic_dog_genind, center = TRUE, scale = FALSE, NA.method = "mean")
 genotype_diagnostic_coyote_genind_scale <- scaleGen(genotype_diagnostic_coyote_genind, center = TRUE, scale = FALSE, NA.method = "mean")
           
+
+
 # Run PCA using ade4
 pca_1 <- dudi.pca(genotype_diagnostic_genind_scale, scannf = FALSE, nf = 3)
 pca_2 <- dudi.pca(genotype_diagnostic_dog_genind_scale, scannf = FALSE, nf = 3)
@@ -333,6 +335,36 @@ p <- plot_ly(data = pca_df,
   legend = list(title = list(text = "<b>Population</b>"))
   )
 
+
+
+# pca in adegenet 
+# Build PCA data frame with metadata for plotting
+
+pca_df <- pca_1$li %>%
+  mutate(
+    Indiv = rownames(pca_1$li),
+    Pop   = key[match(rownames(pca_1$li), indNames(genotype_diagnostic_genind))]
+  )
+
+# Define colors
+n_groups <- length(unique(pca_df$Pop))
+cols <- brewer.pal(min(8, n_groups), "Set1")  # adjust palette if more than 8 groups
+
+# Plot PCA without ellipses
+ggplot(pca_df, aes(x = Axis1, y = Axis2, color = Pop)) +
+  geom_point(size = 3) +
+  scale_color_manual(values = cols) +
+  theme_classic() +
+  labs(
+    x = paste0("PC1 (", round(pca_1$eig[1] / sum(pca_1$eig) * 100, 1), "%)"),
+    y = paste0("PC2 (", round(pca_1$eig[2] / sum(pca_1$eig) * 100, 1), "%)"),
+    color = "Group"
+  ) + 
+  theme(legend.position = "right")
+
+
+
+
 ## filter individuals based on diagnostic pca
 # Convert PCA coordinates to data frame
 pca1_df <- as.data.frame(pca_1$li) %>%
@@ -408,8 +440,102 @@ genotype_matrix_filt$prop_missing <- rowMeans(is.na(genotype_matrix_filt))
 # match to short names
 filt2_df <- genotype_matrix_filt %>%
   group_by(Indiv_short) %>%
-  slice_min(prop_missing, with_ties = F) %>% # Choose replicate with least missing data, allowing ties
+  slice_min(prop_missing, with_ties = F) %>% # Choose replicate with least missing data, NOT allowing ties
   ungroup() #2288 x 284
+
+
+## look at replicates and calculate error rate 
+## Identify replicate samples (triplicates or more)
+replicates <- genotype_matrix_filt %>%
+  group_by(Indiv_short) %>%
+  filter(n() > 2) %>%
+  ungroup()
+
+## Create replicate pairs
+replicate_map <- replicates %>%
+  select(Indiv, Indiv_short) %>%
+  group_by(Indiv_short) %>%
+  summarise(
+    pairs = list(as.data.frame(t(combn(Indiv, 2)))),
+    .groups = "drop"
+  ) %>%
+  unnest(pairs) %>%
+  rename(Sample1 = V1, Sample2 = V2)
+
+## Convert genotype matrix to long format
+gt_long <- replicates %>%
+  select(Indiv, starts_with("Clu_")) %>%
+  pivot_longer(
+    cols = -Indiv,
+    names_to = "Locus",
+    values_to = "GT"
+  )
+
+## Join genotypes for replicate pairs
+paired_gt_df <- replicate_map %>%
+  left_join(gt_long, by = c("Sample1" = "Indiv")) %>%
+  rename(GT1 = GT) %>%
+  left_join(gt_long, by = c("Sample2" = "Indiv", "Locus")) %>%
+  rename(GT2 = GT)
+
+## Genotype comparison function
+score_gt_match <- function(gt1, gt2){
+  
+  if (is.na(gt1) & is.na(gt2)) return("BothNA")
+  else if (is.na(gt1) | is.na(gt2)) return("OneNA")
+  
+  gt1 <- as.character(gt1)
+  gt2 <- as.character(gt2)
+  
+  a1 <- sort(strsplit(gt1, "")[[1]])
+  a2 <- sort(strsplit(gt2, "")[[1]])
+  
+  if (identical(a1,a2)) return("Full Match")
+  else if (any(a1 %in% a2)) return("Partial Match")
+  else return("Mismatch")
+}
+
+## Score genotype matches
+paired_gt_df <- paired_gt_df %>%
+  mutate(MatchType = mapply(score_gt_match, GT1, GT2))
+
+## Calculate pairwise mismatch statistics
+pair_errors <- paired_gt_df %>%
+  group_by(Sample1, Sample2) %>%
+  summarise(
+    N = n(),
+    Full_Match = sum(MatchType == "Full Match", na.rm = TRUE),
+    Partial_Match = sum(MatchType == "Partial Match", na.rm = TRUE),
+    Mismatch = sum(MatchType == "Mismatch", na.rm = TRUE),
+    Missing_Full = sum(MatchType == "BothNA", na.rm = TRUE),
+    Missing_Partial = sum(MatchType == "OneNA", na.rm = TRUE),
+    Full_Match_Rate = Full_Match / (Full_Match + Partial_Match + Mismatch),
+    Mismatch_Rate = (Mismatch + Partial_Match) / (Full_Match + Partial_Match + Mismatch),
+    Inclusive_Missingness = (Missing_Full + Missing_Partial) / N,
+    .groups = "drop"
+  )
+
+## Extract sample IDs if needed
+pair_errors$ID_1 <- sub(".*_", "", pair_errors$Sample1)
+pair_errors$ID_2 <- sub(".*_", "", pair_errors$Sample2)
+
+## Summarize mismatch across replicate pairs
+pair_err_summ <- pair_errors %>%
+  summarise(
+    N_Samples = n(),
+    Avg_Mismatch = round(mean(Mismatch_Rate, na.rm = TRUE), 4),
+    Max_Mismatch = round(max(Mismatch_Rate, na.rm = TRUE), 4),
+    Min_Locus_Overlap = min(((1 - Inclusive_Missingness) * N), na.rm = TRUE),
+    Avg_Missing = round(mean(Inclusive_Missingness * N, na.rm = TRUE), 1)
+  )
+
+#write.csv(paired_gt_df, "/mnt/ceph/kboudinot/wolves/data/neutral/R_files/pop_gen/output/paired_gt_df.csv", row.names = F)
+
+overall_error_rate <- sum(pair_errors$Mismatch + pair_errors$Partial_Match) /
+  sum(pair_errors$Full_Match +
+        pair_errors$Partial_Match +
+        pair_errors$Mismatch)
+
 
 # now filter these for relatedness
 # Extract ID column
@@ -458,18 +584,30 @@ write.csv(related_trioml_df, "/mnt/ceph/kboudinot/wolves/data/neutral/R_files/po
 
 ###########################################################################################
 # Load data that ran on the server 
-relatedness <- read.csv("/mnt/ceph/kboudinot/wolves/data/neutral/R_files/pop_gen/output/relatedness_trioml_full.csv")
-
+relatedness <- read.csv("/mnt/ceph/kboudinot/wolves/data/neutral/R_files/pop_gen/output/relatedness_trioml_full.csv") %>%
+  dplyr::rename(
+    ind1 = ind1.id,
+    ind2 = ind2.id,
+    relatedness = trioml
+  )
+head(relatedness)
 # Filter for relatedness
 # Related indv
-related_0.4 <- relatedness %>% filter(trioml > 0.4) %>% arrange(desc(ind1.id))
-unique(related_0.4$ind1.id) %>% length()
-unique(related_0.4$ind2.id) %>% length()
+related_0.4 <- relatedness %>% 
+  filter(relatedness > 0.4) %>% 
+  arrange(desc(ind1))
 
-df_filt <- related_0.4 %>% select("ind1.id", "ind2.id", "trioml")
-g <- graph_from_data_frame(df_filt[, c("ind1.id", "ind2.id")], directed = FALSE)
-comp <- components(g)    # or components(g) in newer igraph
+unique(related_0.4$ind1) %>% length()
+unique(related_0.4$ind2) %>% length()
+
+df_filt <- related_0.4 %>% 
+  select(ind1, ind2, relatedness)
+
+g <- graph_from_data_frame(df_filt[, c("ind1", "ind2")], directed = FALSE)
+
+comp <- components(g)    
 related_groups <- split(V(g)$name, comp$membership)
+
 head(related_groups)
 
 # Function to select individuals w most related connections 
@@ -511,38 +649,46 @@ break_clusters <- function(df, threshold = 0.4, verbose = TRUE) {
   ))
 }
 
-df <- relatedness %>% select("ind1.id", "ind2.id", "trioml") #trio
-colnames(df) <- c("ind1", "ind2", "relatedness")
+df <- relatedness %>% 
+  select(ind1, ind2, relatedness)
+
 result <- break_clusters(df, threshold = 0.4)
-clean_df <- result$cleaned_df
+
 removed_individuals <- result$removed_ids
 head(removed_individuals)
 length(removed_individuals)
 
-# Combine all individuals from both columns in the relatedness df
-all_indivs <- unique(c(relatedness$ind1.id, relatedness$ind2.id))
 
-# Keep only those NOT in removed_individuals
+# Combine all individuals from both columns in the relatedness df
+all_indivs <- df %>%
+  select(ind1, ind2) %>%
+  unlist() %>%
+  .[!duplicated(.)]
+
 kept_indivs <- setdiff(all_indivs, removed_individuals)
 
 # View the result
 kept_indivs
 
 # Cross check that removing those individuals actually leads to no first order pairs
-length(df$ind1)
-df_ind1_rm <- df %>% filter(!ind1 %in% removed_individuals)
-length(df_ind1_rm$ind1)
-df_ind2_rm <- df_ind1_rm %>% filter(!ind2 %in% removed_individuals)
-length(df_ind2_rm$ind1)
-df_ind2_rm %>% arrange(desc(relatedness))
-unique(c(df_ind2_rm$ind1, df_ind2_rm$ind2)) %>% length()
-unique(c(df$ind1, df$ind2)) %>% length()
-df_0.4 <- df %>% filter(relatedness > 0.4) 
-unique(df_0.4$ind1) %>% length()
+df_clean <- df %>%
+  filter(!ind1 %in% removed_individuals,
+         !ind2 %in% removed_individuals)
+
+df_clean %>% arrange(desc(relatedness))
+
+length(unique(c(df_clean$ind1, df_clean$ind2)))
+length(unique(c(df$ind1, df$ind2)))
+
+df_0.4 <- df %>% filter(relatedness > 0.4)
+length(unique(df_0.4$ind1))
+
 length(removed_individuals)
 
 # df of indivs filtered for relatedness
 kept_indivs_df <- data.frame(Indiv = kept_indivs, stringsAsFactors = FALSE) 
+
+
 
 #######################################################################################################################
 # Keep only ones with metadata
@@ -552,7 +698,7 @@ metadata_structure
 
 # Pull only metadata rows where Sample matches $Indiv
 metadata_matched2 <- metadata_structure %>% 
-  filter(Sample %in% structure_data_df$Indiv)
+  filter(Sample %in% kept_indivs_df$Indiv)
 
 duplicated_samples2 <- metadata_matched2 %>%
   count(Sample) %>%
