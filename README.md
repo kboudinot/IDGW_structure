@@ -17,7 +17,7 @@ Data inputs:
 3. sample_metadata_DAU.csv
 4. relatedness_trioml.csv
 
-Details: Script used for filtering data based on missingess per locus and genotype, diagnostic loci, replicates, and relatedness.
+Details: Script used for filtering data based on missingess per locus and genotype, diagnostic loci, replicates, and relatedness. Additional script for post-filtering analyses (i.e., plotting, PCA, IBD, HE, and FST).
 
 Output: structure_data.txt
 
