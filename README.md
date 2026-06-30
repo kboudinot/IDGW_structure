@@ -14,7 +14,7 @@ Delomas et al. 2023 pipeline: https://github.com/arianacerreta/IDGW-bioinformati
 Data inputs: 
 1. microhaplotype_genotypes_raw.csv
 2. neutral_diagnostic_loci_new(in).csv
-3. sample_metadata_DAU.csv
+3. sample_metadata_region.csv
 4. relatedness_trioml.csv
 
 Details: Script used for filtering data based on missingess per locus and genotype, diagnostic loci, replicates, and relatedness. Additional script for post-filtering analyses (i.e., plotting, PCA, IBD, HE, and FST).
